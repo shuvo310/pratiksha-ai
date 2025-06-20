@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pratikshah - AI </title>
+    <link rel="shortcut icon" href="black.jpeg" type="image/x-icon">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --user-bg: linear-gradient(135deg, #0084ff, #00c6ff);
+            --bot-bg: #e4e6eb;
+            --body-bg: #f0f2f5;
+            --text-dark: #050505;
+        }
+        body {
+            font-family: 'Poppins', 'Hind Siliguri', sans-serif;
+            background-color: var(--body-bg);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        #chat-container {
+            width: 100%;
+            max-width: 450px;
+            height: 100vh;
+            max-height: 800px;
+            background-color: white;
+            border-radius: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        #chat-header {
+            padding: 10px 20px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        #bot-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        #header-info {
+            flex-grow: 1;
+        }
+        #header-info h2 { margin: 0; font-size: 1.1em; }
+        #header-info p { margin: 0; font-size: 0.8em; color: #65676b; }
+        
+        #clear-chat-btn {
+            background: none;
+            border: none;
+            font-size: 22px;
+            color: #65676b;
+            cursor: pointer;
+            padding: 5px;
+            margin-left: auto;
+        }
+        #clear-chat-btn:hover {
+            color: #050505;
+        }
+
+        #chat-window {
+            flex-grow: 1;
+            padding: 10px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+        .message-wrapper {
+            display: flex;
+            margin-bottom: 10px;
+            max-width: 85%;
+            position: relative;
+        }
+        .message {
+            padding: 10px 15px;
+            border-radius: 18px;
+            line-height: 1.4;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+        }
+        .message-wrapper.user { align-self: flex-end; }
+        .message-wrapper.bot { align-self: flex-start; }
+        .user .message { background: var(--user-bg); color: white; border-bottom-right-radius: 4px;}
+        .bot .message { background: var(--bot-bg); color: var(--text-dark); border-bottom-left-radius: 4px; font-family: 'Hind Siliguri', sans-serif; }
+        .message-wrapper:hover .delete-btn { opacity: 1; }
+        .delete-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #a8abaf;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .user .delete-btn { left: -25px; }
+        .bot .delete-btn { right: -25px; }
+        .message-image { max-width: 100%; border-radius: 15px; margin-top: 5px; }
+
+        #image-preview-container { padding: 0 10px; display: none; }
+        #image-preview { max-width: 100px; max-height: 100px; border-radius: 10px; border: 1px solid #ddd; }
+        
+        #chat-input-area { display: flex; align-items: center; padding: 10px; }
+        #upload-btn, #mic-btn { font-size: 24px; cursor: pointer; color: #0084ff; padding: 5px; border: none; background: none;}
+        #mic-btn.recording { color: #ff0000; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
+
+        #user-input {
+            flex-grow: 1;
+            border: none;
+            background-color: #f0f2f5;
+            border-radius: 18px;
+            padding: 10px 15px;
+            font-size: 1em;
+            margin: 0 5px;
+        }
+        #user-input:focus { outline: none; }
+        #send-btn { font-size: 24px; cursor: pointer; color: #0084ff; border: none; background: none; }
+        
+        #typing-indicator { display: none; padding: 0 15px; margin-bottom: 10px;}
+        .typing-bubble { background-color: var(--bot-bg); width: auto; display: inline-block; padding: 10px; border-radius: 18px; }
+        .typing-bubble .dot { width: 8px; height: 8px; background-color: #8d949e; border-radius: 50%; display: inline-block; margin: 0 2px; animation: typing 1.4s infinite; }
+        .typing-bubble .dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-bubble .dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes typing { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1.0); } }
+
+        @media (max-width: 500px) {
+            body { align-items: flex-start; background: white; }
+            #chat-container { width: 100%; height: 100vh; max-height: 100%; border-radius: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div id="chat-container">
+        <div id="chat-header">
+            <img id="bot-avatar" src="black.jpeg" alt="Bot Avatar">
+            <div id="header-info">
+                <h2>Pratikshah</h2>
+                <p>Always active</p>
+            </div>
+            <button id="clear-chat-btn">🗑️</button>
+        </div>
+        <div id="chat-window"></div>
+        <div id="typing-indicator">
+            <div class="typing-bubble">
+                <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+            </div>
+        </div>
+        <div id="image-preview-container">
+            <img id="image-preview" src="" alt="Image Preview">
+        </div>
+        <div id="chat-input-area">
+            <label id="upload-btn" for="file-input">📎</label>
+            <input type="file" id="file-input" accept="image/*" style="display:none;">
+            <input type="text" id="user-input" placeholder="Aa">
+            <button id="mic-btn">🎙️</button>
+            <button id="send-btn">➤</button>
+        </div>
+    </div>
+    
+    <script type="module">
+        import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
+
+        // DOM Elements
+        const chatWindow = document.getElementById('chat-window');
+        const userInput = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+        const fileInput = document.getElementById('file-input');
+        const imagePreviewContainer = document.getElementById('image-preview-container');
+        const imagePreview = document.getElementById('image-preview');
+        const typingIndicator = document.getElementById('typing-indicator');
+        const micBtn = document.getElementById('mic-btn');
+        const clearChatBtn = document.getElementById('clear-chat-btn');
+
+        // API Key and Model Setup
+        const API_KEY = "AIzaSyDmPvQ2LpCcaXJOaW-m6UznoX6WCo_3_Cg"; 
+        const genAI = new GoogleGenerativeAI(API_KEY);
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+        let chat;
+        let selectedFile = null;
+        let bengaliVoice = null;
+
+        function loadVoices() {
+            const voices = speechSynthesis.getVoices();
+            bengaliVoice = voices.find(voice => voice.lang.startsWith('bn') && voice.name.includes('Google'));
+            if (!bengaliVoice) {
+                bengaliVoice = voices.find(voice => voice.lang.startsWith('bn'));
+            }
+        }
+        
+        function speak(text) {
+            if (!bengaliVoice || !speechSynthesis) return;
+            speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.voice = bengaliVoice;
+            utterance.lang = 'bn-BD';
+            utterance.pitch = 1.1;
+            utterance.rate = 1;
+            speechSynthesis.speak(utterance);
+        }
+
+        speechSynthesis.onvoiceschanged = loadVoices;
+
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition;
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.lang = 'bn-BD';
+            recognition.interimResults = false;
+
+            micBtn.addEventListener('click', () => {
+                if (micBtn.classList.contains('recording')) {
+                    recognition.stop();
+                } else {
+                    recognition.start();
+                }
+            });
+
+            recognition.onstart = () => { micBtn.classList.add('recording'); userInput.placeholder = "শুনছি..."; };
+            recognition.onend = () => { micBtn.classList.remove('recording'); userInput.placeholder = "Aa"; };
+            recognition.onresult = (event) => {
+                userInput.value = event.results[0][0].transcript;
+                sendMessage();
+            };
+            recognition.onerror = (event) => { console.error("Speech recognition error:", event.error); userInput.placeholder = "কিছু একটা সমস্যা হয়েছে"; };
+        } else {
+            micBtn.style.display = 'none';
+        }
+
+        async function initializeChat() {
+            chat = model.startChat({ history: getChatHistoryForAPI() });
+            displayHistory();
+        }
+        
+        function isGreetingQuery(text) {
+            const lowerCaseText = text.toLowerCase().trim();
+            const keywords = ["hi", "hello", "hey", "হ্যালো", "ওহে"];
+            return keywords.includes(lowerCaseText);
+        }
+        
+        function isAkhiDasQuery(text) {
+            const lowerCaseText = text.toLowerCase();
+            const keywords = ['best friend', 'সেরা বন্ধু', 'প্রিয় বন্ধু', 'best fnd'];
+            const nameKeywords = ['shuvo', 'শুভ'];
+            return keywords.some(k => lowerCaseText.includes(k)) && nameKeywords.some(n => lowerCaseText.includes(n));
+        }
+
+        function isNameQuery(text) {
+            const lowerCaseText = text.toLowerCase();
+            const keywords = ["তোমার নাম কি", "your name", "নাম কি", "tomar nam ki"];
+            return keywords.some(k => lowerCaseText.includes(k));
+        }
+
+        // --- UPDATED AND IMPROVED FUNCTION ---
+        function isCreatorWebsiteQuery(text) {
+            const lowerCaseText = text.toLowerCase();
+            // Creator-related keywords
+            const creatorKeywords = ["কে বানিয়েছে", "তৈরি করেছে", "who made you", "creator", "নির্মাতা", "শুভ দাস", "shuvo das"];
+            // Website-related keywords
+            const websiteKeywords = ["website", "portfolio", "লিংক", "link", "site", "ওয়েবসাইট", "পোর্টফোলিও"];
+
+            // Check if both a creator keyword AND a website keyword are present
+            const hasCreatorWord = creatorKeywords.some(c => lowerCaseText.includes(c));
+            const hasWebsiteWord = websiteKeywords.some(w => lowerCaseText.includes(w));
+
+            return hasCreatorWord && hasWebsiteWord;
+        }
+
+        async function sendMessage() {
+            const userText = userInput.value.trim();
+            if (userText === "" && !selectedFile) return;
+
+            const messageId = Date.now();
+            addMessageToUI(userText, 'user', messageId, selectedFile ? `data:${selectedFile.mimeType};base64,${selectedFile.data}` : null);
+            saveMessageToHistory({ id: messageId, role: 'user', text: userText });
+            
+            userInput.value = '';
+            typingIndicator.style.display = 'block';
+
+            try {
+                let botText;
+
+                if (isGreetingQuery(userText)) {
+                    botText = "হ্যালো! কি খবর? আমি প্রতিকসাহ। আপনার কি কোনো কাজে সাহায্য লাগবে? 😊";
+                } else if (isCreatorWebsiteQuery(userText)) {
+                    botText = `আমাকে তৈরি করেছেন শুভ দাস। তার পার্সোনাল পোর্টফোলিও ওয়েবসাইট দেখতে পারেন এখানে:\nhttps://shuvo310.github.io/Shuvo-Das-portfolio/`;
+                } else if (isNameQuery(userText)) {
+                    botText = "আমার নাম প্রতিকসাহ।";
+                } else if (isAkhiDasQuery(userText)) {
+                    botText = `অবশ্যই—আখি দাস। শুভ দাসের জীবনের সবচেয়ে বিশেষ একজন মানুষ।`; // Simplified for brevity
+                } else {
+                    const promptParts = [
+                        `You are a helpful and empathetic chatbot named 'Pratikshah'. You MUST ALWAYS reply in the Bengali language. Your tone is very friendly.
+                        If asked who created you (and not for the website), reply with: "আমাকে তৈরি করেছেন শুভ দাস। তিনি শুধু একজন প্রযুক্তিপ্রেমীই নন, একজন অসাধারণ হৃদয়ের মানুষও। আমি গর্বিত যে আমি তার চিন্তা, কল্পনা আর মেধার ফল।"
+                        If the user asks to create/make/draw an image, reply with: "আমি নিজে ছবি তৈরি করতে পারি না, তবে আমি আপনাকে ছবি তৈরির AI-এর জন্য একটি চমৎকার বর্ণনা (প্রম্পট) লিখে দিতে পারি। আপনি কীসের ছবি চান, আমাকে বলুন?"
+                        User's prompt: "${userText}"`,
+                    ];
+                    
+                    if (selectedFile) {
+                        promptParts.push({ inlineData: { data: selectedFile.data, mimeType: selectedFile.mimeType } });
+                    }
+                    const result = await model.generateContent(promptParts);
+                    botText = await result.response.text();
+                }
+
+                const botMessageId = Date.now() + 1;
+                addMessageToUI(botText, 'bot', botMessageId);
+                saveMessageToHistory({ id: botMessageId, role: 'model', text: botText });
+                speak(botText);
+
+            } catch (error) {
+                const errorId = Date.now() + 1;
+                addMessageToUI("দুঃখিত, একটি সমস্যা হয়েছে। আবার চেষ্টা করুন।", 'bot', errorId);
+                console.error("API Error:", error);
+            } finally {
+                typingIndicator.style.display = 'none';
+                resetImageUpload();
+            }
+        }
+        
+        function addMessageToUI(text, role, id, imageSrc = null) {
+            const wrapper = document.createElement('div');
+            wrapper.className = `message-wrapper ${role}`;
+            wrapper.dataset.id = id;
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message';
+            
+            if (text) messageDiv.innerText = text;
+
+            if (imageSrc) {
+                const img = document.createElement('img');
+                img.src = imageSrc;
+                img.className = 'message-image';
+                messageDiv.prepend(img);
+            }
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'delete-btn';
+            deleteBtn.innerHTML = '✕';
+            deleteBtn.onclick = () => deleteMessage(id);
+
+            wrapper.appendChild(messageDiv);
+            wrapper.appendChild(deleteBtn);
+            chatWindow.appendChild(wrapper);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+
+        function deleteMessage(id) {
+            document.querySelector(`.message-wrapper[data-id='${id}']`)?.remove();
+            let history = loadHistoryFromStorage();
+            history = history.filter(msg => msg.id !== id);
+            localStorage.setItem('chatHistory', JSON.stringify(history));
+        }
+        
+        function saveMessageToHistory(message) {
+            const history = loadHistoryFromStorage();
+            history.push(message);
+            localStorage.setItem('chatHistory', JSON.stringify(history));
+        }
+
+        function loadHistoryFromStorage() {
+            return JSON.parse(localStorage.getItem('chatHistory') || '[]');
+        }
+
+        function getChatHistoryForAPI() {
+            return loadHistoryFromStorage().map(msg => ({
+                role: msg.role,
+                parts: [{ text: msg.text }]
+            }));
+        }
+
+        function displayHistory() {
+            const history = loadHistoryFromStorage();
+            chatWindow.innerHTML = '';
+            history.forEach(msg => addMessageToUI(msg.text, msg.role, msg.id));
+        }
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                selectedFile = { data: reader.result.split(',')[1], mimeType: file.type };
+                imagePreview.src = reader.result;
+                imagePreviewContainer.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        });
+
+        function resetImageUpload() {
+            fileInput.value = '';
+            imagePreview.src = '';
+            imagePreviewContainer.style.display = 'none';
+            selectedFile = null;
+        }
+        
+        clearChatBtn.addEventListener('click', () => {
+            if (confirm("আপনি কি সব চ্যাট মুছে ফেলতে চান?")) {
+                chatWindow.innerHTML = '';
+                localStorage.removeItem('chatHistory');
+            }
+        });
+
+        sendBtn.addEventListener('click', sendMessage);
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        initializeChat();
+    </script>
+</body>
+</html>
